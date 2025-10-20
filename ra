@@ -3,3 +3,32 @@
 sudo apt update
 sudo apt install ffmpeg
 
+if ! command -v xwininfo &> /dev/null; then
+    sudo apt install x11-utils 
+fi
+
+if ! command -v ffmpeg &> /dev/null; then
+    sudo apt update
+    sudo apt install ffmpeg
+fi
+
+echo "Click vào cửa sổ bạn muốn quay..."
+
+read -r info <<< "$(xwininfo | awk '
+/Absolute upper-left X:/ {x=$4}
+/Absolute upper-left Y:/ {y=$4}
+/Width:/ {w=$2}
+/Height:/ {h=$2}
+END {print x, y, w, h}
+')"
+
+x=$(echo $info | awk '{print $1}')
+y=$(echo $info | awk '{print $2}')
+width=$(echo $info | awk '{print $3}')
+height=$(echo $info | awk '{print $4}')
+
+echo "Đang quay cửa sổ tại (${x},${y}), kích thước ${width}x${height}..."
+
+output="record_$(date +%Y%m%d_%H%M%S).mkv"
+
+ffmpeg -f x11grab -framerate 30 -video_size ${width}x${height} -i :0.0+${x},${y} "$output"
