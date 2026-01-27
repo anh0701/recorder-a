@@ -1,6 +1,6 @@
 import subprocess
 import signal
-from settings import Settings
+from settings import Settings, TEST_MODE
 
 
 class Recorder:
@@ -12,6 +12,11 @@ class Recorder:
         self.process = None
 
     def start(self):
+
+        if TEST_MODE:
+            print(f"[TEST] start: {self.w}x{self.h} @ {self.x},{self.y}")
+            return
+        
         cmd = [
             "ffmpeg",
             "-y",
@@ -28,6 +33,10 @@ class Recorder:
         )
 
     def stop(self):
+        if TEST_MODE:
+            print("[TEST] stop")
+            return
+        
         if self.process:
             self.process.send_signal(signal.SIGINT)
             self.process.wait()
