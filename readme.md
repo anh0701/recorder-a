@@ -27,3 +27,13 @@
 
 - Fixed aspect ratio (9:16, 16:9, 1:1…) - Mode B
 
+### Techstack
+
+| Thành phần     | Dùng                        |
+| -------------- | --------------------------- |
+| GUI            | **PySide6 (Qt for Python)** |
+| Capture        | `ffmpeg` (x11grab)          |
+| Window overlay | Qt `QWidget`                |
+| Draw rectangle | `QPainter`                  |
+| Build          | `pyinstaller`               |
+| Linux package  | AppImage                    |
