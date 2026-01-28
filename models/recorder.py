@@ -24,7 +24,7 @@ class Recorder:
             "-framerate", str(Settings.FPS),
             "-f", "x11grab",
             "-i", f":0.0+{self.x},{self.y}",
-            Settings.OUTPUT_FILE
+            Settings.output_file()
         ]
 
         self.process = subprocess.Popen(
