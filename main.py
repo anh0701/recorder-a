@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QApplication
 from views.recording_overlay import RecordingOverlay
 from views.overlay import Overlay
 
-from recorder import Recorder
+from models.recorder import Recorder
 
 recorder = None
 recording_overlay = None

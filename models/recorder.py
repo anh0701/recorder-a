@@ -1,6 +1,6 @@
 import subprocess
 import signal
-from settings import Settings, TEST_MODE
+from models.settings import Settings, TEST_MODE
 
 
 class Recorder:
