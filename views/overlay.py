@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, QRect, QPoint
 from PySide6.QtGui import QPainter, QPen, QColor, QFont
 
 from settings import Settings
-from mode_bar import ModeBar
+from views.mode_bar import ModeBar
 
 
 class Overlay(QWidget):
