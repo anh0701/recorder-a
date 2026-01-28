@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QButtonGroup
 from models.settings import Settings
 
 
@@ -18,23 +18,29 @@ class ModeBar(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
 
-        self.buttons = []
-        for text, value in [
-            ("FREE", Settings.MODE_FREE),
-            ("16:9", Settings.RATIO_16_9),
-            ("9:16", Settings.RATIO_9_16),
-            ("1:1",  Settings.RATIO_1_1),
-        ]:
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+        self.group.idClicked.connect(self._on_clicked)
+
+        self.id_to_value = {}
+
+        modes = [
+            (0, "FREE", Settings.MODE_FREE),
+            (1, "16:9", Settings.RATIO_16_9),
+            (2, "9:16", Settings.RATIO_9_16),
+            (3, "1:1",  Settings.RATIO_1_1),
+        ]
+
+        for id_, text, value in modes:
             btn = QPushButton(text)
             btn.setCheckable(True)
-            btn.clicked.connect(lambda _, v=value: self.select(v))
             layout.addWidget(btn)
-            self.buttons.append(btn)
 
-        self.buttons[0].setChecked(True)
+            self.group.addButton(btn, id_)
+            self.id_to_value[id_] = value
 
-    def select(self, value):
-        for b in self.buttons:
-            b.setChecked(False)
-        self.sender().setChecked(True)
+        self.group.button(0).setChecked(True)
+
+    def _on_clicked(self, id_: int):
+        value = self.id_to_value[id_]
         self.on_change(value)
