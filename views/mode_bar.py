@@ -55,13 +55,19 @@ class ModeBar(QWidget):
         self.on_change(value)
     
     def open_settings(self):
+        overlay = self.parentWidget()   
+
         if self.settings_win is None:
-            self.settings_win = SettingsWindow(self.settings)
-            # self.settings_win.finished.connect(
-            #     lambda: setattr(self, "settings_win", None)
-            # )
+            self.settings_win = SettingsWindow(self.settings, parent=overlay)
+
+            pos = self.mapTo(overlay, self.rect().bottomLeft())
+            self.settings_win.move(pos.x(), pos.y() + 6)
+
             self.settings_win.show()
+            self.settings_win.raise_()
         else:
             self.settings_win.raise_()
-            self.settings_win.activateWindow()
+            self.settings_win.show()
+
+
 
