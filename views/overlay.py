@@ -5,7 +5,8 @@ from models.settings import Settings
 from views.mode_bar import ModeBar
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import QRect
-
+from PySide6.QtWidgets import QMessageBox, QApplication
+import sys
 
 class Overlay(QWidget):
     def __init__(self, on_done, settings):
@@ -28,9 +29,20 @@ class Overlay(QWidget):
         self.showFullScreen()
 
         self.mode_bar = ModeBar(self.set_mode, self.settings)
+        self.mode_bar.closeRequested.connect(self.confirm_exit)
         self.mode_bar.setParent(self)
         self.mode_bar.move(20, 20)
         self.mode_bar.show()
+    
+    def confirm_exit(self):
+        ret = QMessageBox.question(
+            None,
+            "Exit",
+            "Thoát ứng dụng?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if ret == QMessageBox.Yes:
+            QApplication.quit()
 
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:

@@ -1,9 +1,11 @@
 from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QButtonGroup
 from models.settings import Settings
 from views.settings_window import SettingsWindow
-
+from PySide6.QtCore import Qt, Signal
 
 class ModeBar(QWidget):
+    closeRequested = Signal()
+
     def __init__(self, on_change, settings):
         super().__init__()
         self.on_change = on_change
@@ -16,11 +18,18 @@ class ModeBar(QWidget):
             QPushButton { color: white; background: transparent; border: none; padding: 6px 12px; }
             QPushButton:hover { background: rgba(255,255,255,40); }
             QPushButton:checked { background: rgba(255,80,80,180); }
+            QToolTip {
+                background-color: rgba(30,30,30,220);
+                color: white;
+                border: 1px solid #555;
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
         """)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
-        layout.setSpacing(4)
+        layout.setSpacing(8)
 
         self.group = QButtonGroup(self)
         self.group.setExclusive(True)
@@ -47,8 +56,29 @@ class ModeBar(QWidget):
 
         layout.addStretch()
         settings_btn = QPushButton("⚙")
+        settings_btn.setToolTip("Settings")
         settings_btn.clicked.connect(self.open_settings)
         layout.addWidget(settings_btn)
+
+        layout.addSpacing(12)
+        self.btn_close = QPushButton("✕")
+        self.btn_close.setFixedSize(30, 30)
+        self.btn_close.setStyleSheet("""
+            QPushButton {
+                border: none;
+                color: white;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: rgba(255, 0, 0, 180);
+                border-radius: 4px;
+            }
+            """)
+        self.btn_close.setToolTip("Close app")
+        self.btn_close.clicked.connect(self.closeRequested.emit)
+        self.btn_close.setCursor(Qt.PointingHandCursor)
+
+        layout.addWidget(self.btn_close)
 
     def _on_clicked(self, id_: int):
         value = self.id_to_value[id_]
