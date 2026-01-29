@@ -4,9 +4,9 @@ from views.overlay import Overlay
 from views.recording_root import RecordingRootWindow
 from views.stop_bar import StopBarWindow
 from models.recorder import Recorder
-from models.settings import Settings
+from models.settings import load_settings
 
-settings = Settings()
+settings = load_settings()
 overlay = None
 recorder = None
 recording_root = None
