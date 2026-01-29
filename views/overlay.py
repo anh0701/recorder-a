@@ -3,6 +3,8 @@ from PySide6.QtCore import Qt, QRect, QPoint
 from PySide6.QtGui import QPainter, QPen, QColor
 from models.settings import Settings
 from views.mode_bar import ModeBar
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import QRect
 
 
 class Overlay(QWidget):
@@ -40,6 +42,11 @@ class Overlay(QWidget):
             return
 
         pos = e.position().toPoint()
+
+        screen_rect = self.screen().geometry()
+        pos.setX(max(screen_rect.left(), min(pos.x(), screen_rect.right())))
+        pos.setY(max(screen_rect.top(),  min(pos.y(), screen_rect.bottom())))
+
         dx = pos.x() - self.start.x()
         dy = pos.y() - self.start.y()
 
@@ -50,6 +57,9 @@ class Overlay(QWidget):
                 dx = int(abs(dy) * self.ratio) * (1 if dx >= 0 else -1)
 
             pos = QPoint(self.start.x() + dx, self.start.y() + dy)
+            
+            pos.setX(max(screen_rect.left(), min(pos.x(), screen_rect.right())))
+            pos.setY(max(screen_rect.top(),  min(pos.y(), screen_rect.bottom())))
 
         self.end = pos
         self.update()
@@ -58,6 +68,7 @@ class Overlay(QWidget):
         if self.dragging:
             self.dragging = False
             rect = QRect(self.start, self.end).normalized()
+            rect = self.clamp_rect_to_screen(rect)
             self.close()
             self.on_done(rect)
 
@@ -75,3 +86,15 @@ class Overlay(QWidget):
         if self.dragging:
             p.setPen(QPen(QColor(255, 80, 80), 2))
             p.drawRect(QRect(self.start, self.end).normalized())
+    
+    def clamp_rect_to_screen(self, rect: QRect) -> QRect:
+        screen = QGuiApplication.primaryScreen()
+        screen_rect = screen.geometry()
+
+        x = max(rect.x(), screen_rect.x())
+        y = max(rect.y(), screen_rect.y())
+
+        w = min(rect.width(), screen_rect.right() - x + 1)
+        h = min(rect.height(), screen_rect.bottom() - y + 1)
+
+        return QRect(x, y, w, h)
