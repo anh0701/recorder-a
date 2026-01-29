@@ -4,7 +4,9 @@ from views.overlay import Overlay
 from views.recording_root import RecordingRootWindow
 from views.stop_bar import StopBarWindow
 from models.recorder import Recorder
+from models.settings import Settings
 
+settings = Settings()
 overlay = None
 recorder = None
 recording_root = None
@@ -24,7 +26,7 @@ def stop_app():
 
 def on_region_selected(rect):
     global recorder, recording_root, stop_bar
-    recorder = Recorder(rect)
+    recorder = Recorder(rect, settings)
     recorder.start()
 
     recording_root = RecordingRootWindow(rect)
@@ -33,5 +35,5 @@ def on_region_selected(rect):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    overlay = Overlay(on_region_selected)
+    overlay = Overlay(on_region_selected, settings=settings)
     sys.exit(app.exec())

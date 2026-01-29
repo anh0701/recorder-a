@@ -1,11 +1,14 @@
 from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QButtonGroup
 from models.settings import Settings
+from views.settings_window import SettingsWindow
 
 
 class ModeBar(QWidget):
-    def __init__(self, on_change):
+    def __init__(self, on_change, settings):
         super().__init__()
         self.on_change = on_change
+        self.settings_win = None
+        self.settings = settings
         self.setFixedHeight(40)
 
         self.setStyleSheet("""
@@ -17,6 +20,7 @@ class ModeBar(QWidget):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
+        layout.setSpacing(4)
 
         self.group = QButtonGroup(self)
         self.group.setExclusive(True)
@@ -41,6 +45,23 @@ class ModeBar(QWidget):
 
         self.group.button(0).setChecked(True)
 
+        layout.addStretch()
+        settings_btn = QPushButton("⚙")
+        settings_btn.clicked.connect(self.open_settings)
+        layout.addWidget(settings_btn)
+
     def _on_clicked(self, id_: int):
         value = self.id_to_value[id_]
         self.on_change(value)
+    
+    def open_settings(self):
+        if self.settings_win is None:
+            self.settings_win = SettingsWindow(self.settings)
+            # self.settings_win.finished.connect(
+            #     lambda: setattr(self, "settings_win", None)
+            # )
+            self.settings_win.show()
+        else:
+            self.settings_win.raise_()
+            self.settings_win.activateWindow()
+

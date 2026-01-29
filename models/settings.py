@@ -1,9 +1,31 @@
-from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
+from datetime import datetime
+from enum import Enum
+import json
 
+TEST_MODE = True
+
+class AudioMode(Enum):
+    NONE = "none"
+    SYSTEM = "system"
+    MIC = "mic"
+    BOTH = "both"
+
+# CONFIG_FILE = Path.home() / ".myrecorder.json"
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_DIR = BASE_DIR / "config"
+CONFIG_DIR.mkdir(exist_ok=True)
+CONFIG_FILE = CONFIG_DIR / "settings.json"
+
+@dataclass
 class Settings:
-    FPS = 30
+    # FPS = 30
     # OUTPUT_FILE = "record.mp4"
+    fps: int = 30
+    audio_mode: AudioMode = AudioMode.NONE
+    output_dir: Path | None = None
 
     MODE_FREE = "free"
     MODE_RATIO = "ratio"
@@ -14,22 +36,44 @@ class Settings:
 
     APP_NAME = "MyRecorder"
 
-    @staticmethod
-    def output_file():
+    def __post_init__(self):
+        if self.output_dir is None:
+            self.output_dir = self._default_output_dir()
+
+    def _default_output_dir(self) -> Path:
         home = Path.home()
+        base = home / "Videos"
+        if not base.exists():
+            base = home / "Movies"
+        return base / self.APP_NAME
 
-        # Videos (Windows/Linux) | Movies (macOS)
-        base_dir = home / "Videos"
-        if not base_dir.exists():
-            base_dir = home / "Movies"
-
+    def generate_output_file(self) -> Path:
         today = datetime.now().strftime("%Y-%m-%d")
-        time_now = datetime.now().strftime("%H-%M-%S")
+        now = datetime.now().strftime("%H-%M-%S")
 
-        output_dir = base_dir / Settings.APP_NAME / today
-        output_dir.mkdir(parents=True, exist_ok=True)
+        out = self.output_dir / today
+        out.mkdir(parents=True, exist_ok=True)
 
-        return str(output_dir / f"record_{time_now}.mp4")
+        return out / f"record_{now}.mp4"
+
+def load_settings() -> Settings:
+    if not CONFIG_FILE.exists():
+        return Settings()
+
+    data = json.loads(CONFIG_FILE.read_text())
+    return Settings(
+        fps=data.get("fps", 30),
+        audio_mode=AudioMode(data.get("audio_mode", "none")),
+        output_dir=Path(data.get("output_dir")),
+    )
 
 
-TEST_MODE = False
+def save_settings(settings: Settings):
+    data = {
+        "fps": settings.fps,
+        "audio_mode": settings.audio_mode.value,
+        "output_dir": str(settings.output_dir),
+    }
+    CONFIG_FILE.write_text(json.dumps(data, indent=2))
+
+

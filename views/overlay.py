@@ -8,9 +8,10 @@ from PySide6.QtCore import QRect
 
 
 class Overlay(QWidget):
-    def __init__(self, on_done):
+    def __init__(self, on_done, settings):
         super().__init__()
         self.on_done = on_done
+        self.settings = settings
         self.start = QPoint()
         self.end = QPoint()
         self.dragging = False
@@ -26,7 +27,7 @@ class Overlay(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.showFullScreen()
 
-        self.mode_bar = ModeBar(self.set_mode)
+        self.mode_bar = ModeBar(self.set_mode, self.settings)
         self.mode_bar.setParent(self)
         self.mode_bar.move(20, 20)
         self.mode_bar.show()

@@ -1,31 +1,52 @@
 import subprocess
 import signal
-from models.settings import Settings, TEST_MODE
+from models.settings import AudioMode, Settings, TEST_MODE
 
 
 class Recorder:
-    def __init__(self, rect):
+    def __init__(self, rect, settings: Settings):
         self.x = rect.x()
         self.y = rect.y()
         self.w = rect.width()
         self.h = rect.height()
+
+        self.settings = settings
         self.process = None
 
     def start(self):
-
         if TEST_MODE:
-            print(f"[TEST] start: {self.w}x{self.h} @ {self.x},{self.y}")
+            print(
+                f"[TEST] start {self.w}x{self.h} "
+                f"@ {self.x},{self.y}, "
+                f"fps={self.settings.fps}, "
+                f"audio={self.settings.audio_mode}"
+            )
             return
-        
+
+        output_file = self.settings.generate_output_file()
+
         cmd = [
             "ffmpeg",
             "-y",
             "-video_size", f"{self.w}x{self.h}",
-            "-framerate", str(Settings.FPS),
+            "-framerate", str(self.settings.fps),
             "-f", "x11grab",
             "-i", f":0.0+{self.x},{self.y}",
-            Settings.output_file()
         ]
+
+        if self.settings.audio_mode == AudioMode.SYSTEM:
+            cmd += ["-f", "pulse", "-i", "default"]
+
+        elif self.settings.audio_mode == AudioMode.MIC:
+            cmd += ["-f", "pulse", "-i", "alsa_input"]
+
+        elif self.settings.audio_mode == AudioMode.BOTH:
+            cmd += [
+                "-f", "pulse", "-i", "default",
+                "-f", "pulse", "-i", "alsa_input"
+            ]
+
+        cmd.append(str(output_file))
 
         self.process = subprocess.Popen(
             cmd,
@@ -36,7 +57,8 @@ class Recorder:
         if TEST_MODE:
             print("[TEST] stop")
             return
-        
+
         if self.process:
             self.process.send_signal(signal.SIGINT)
             self.process.wait()
+            self.process = None
