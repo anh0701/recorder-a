@@ -37,3 +37,34 @@
 | Draw rectangle | `QPainter`                  |
 | Build          | `pyinstaller`               |
 | Linux package  | AppImage                    |
+
+<!-- 
+app/
+├─ main.py
+│   └─ tạo QApplication
+│   └─ khởi động Overlay
+│
+├─ views/
+│   ├─ overlay.py
+│   │   ├─ Overlay (toàn màn hình)
+│   │   ├─ cho phép kéo chọn vùng quay
+│   │   └─ emit rect    ────────────────┐
+│   │                                   │
+│   ├─ recording_root.py                │
+│   │   ├─ RecordingRootWindow ◀───────┘
+│   │   ├─ chỉ vẽ VIỀN (ngoài vùng quay)
+│   │   ├─ KHÔNG tham gia record
+│   │   └─ always-on-top + click-through
+│   │
+│   └─ mode_bar.py
+│       └─ thanh điều khiển (start/stop)      
+│
+└─ models/
+   ├─ recorder.py
+   │    ├─ nhận rect gốc từ Overlay
+   │    ├─ gọi ffmpeg
+   │    └─ QUAY CHỈ rect (KHÔNG viền)
+   └─ settings.py
+       └─ lưu mode, fps, audio, ratio...
+
+-->
