@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 import json
 
-TEST_MODE = False
+TEST_MODE = True
 
 class AudioMode(Enum):
     NONE = "none"

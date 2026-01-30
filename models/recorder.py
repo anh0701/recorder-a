@@ -1,7 +1,7 @@
 import subprocess
 import signal
 from models.settings import AudioMode, Settings, TEST_MODE
-from audio_manager import AudioManager
+from models.audio_manager import AudioManager
 
 class Recorder:
     def __init__(self, rect, settings: Settings):

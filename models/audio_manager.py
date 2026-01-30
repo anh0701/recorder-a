@@ -1,5 +1,5 @@
 import subprocess
-
+from models.settings import AudioMode
 
 def sh(cmd: str) -> str:
     return subprocess.check_output(cmd, shell=True, text=True).strip()
@@ -41,14 +41,14 @@ class AudioManager:
         self.modules.clear()
 
 
-    def prepare(self, mode):
-        if mode.name == "SYSTEM":
+    def prepare(self, mode: AudioMode) -> str | None:
+        if mode == AudioMode.SYSTEM:
             return self.get_system_source()
 
-        if mode.name == "MIC":
+        if mode == AudioMode.MIC:
             return self.get_mic_source()
 
-        if mode.name == "BOTH":
+        if mode == AudioMode.BOTH:
             self.setup_mix()
             return f"{self.sink_name}.monitor"
 

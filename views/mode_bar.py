@@ -62,16 +62,22 @@ class ModeBar(QWidget):
 
         layout.addSpacing(12)
         self.btn_close = QPushButton("✕")
-        self.btn_close.setFixedSize(30, 30)
+        self.btn_close.setFixedSize(28, 28)
         self.btn_close.setStyleSheet("""
             QPushButton {
-                border: none;
+                background-color: rgba(255, 255, 255, 30);
                 color: white;
-                font-weight: bold;
+                font-size: 14px;
+                font-weight: 600;
+                border-radius: 14px;
             }
+
             QPushButton:hover {
-                background: rgba(255, 0, 0, 180);
-                border-radius: 4px;
+                background-color: rgb(232, 17, 35); 
+            }
+
+            QPushButton:pressed {
+                background-color: rgb(200, 15, 30);
             }
             """)
         self.btn_close.setToolTip("Close app")

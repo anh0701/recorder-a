@@ -1,5 +1,5 @@
 {
   "fps": 30,
-  "audio_mode": "system",
+  "audio_mode": "none",
   "output_dir": "/home/anh/Videos/MyRecorder"
 }
