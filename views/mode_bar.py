@@ -11,7 +11,15 @@ class ModeBar(QWidget):
         self.on_change = on_change
         self.settings_win = None
         self.settings = settings
-        self.setFixedHeight(40)
+        self.setFixedHeight(60)
+        self.setMinimumWidth(500) 
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setAutoFillBackground(True)
+
+        self._dragging = False
+        self._drag_offset = None
+        self.setCursor(Qt.OpenHandCursor)
+
 
         self.setStyleSheet("""
             QWidget { background: rgba(30,30,30,220); border-radius: 6px; }
@@ -105,5 +113,38 @@ class ModeBar(QWidget):
             self.settings_win.raise_()
             self.settings_win.show()
 
+    def mousePressEvent(self, event):
+        child = self.childAt(event.position().toPoint())
+        if isinstance(child, QPushButton):
+            return
+
+        if event.button() == Qt.LeftButton:
+            self._dragging = True
+            self._drag_offset = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self.setCursor(Qt.ClosedHandCursor)
+            event.accept()
+
+
+    def mouseMoveEvent(self, event):
+        if self._dragging and self._drag_offset:
+            new_pos = event.globalPosition().toPoint() - self._drag_offset
+
+            parent = self.parentWidget()
+            if parent:
+                max_x = parent.width() - self.width()
+                max_y = parent.height() - self.height()
+                new_pos.setX(max(0, min(new_pos.x(), max_x)))
+                new_pos.setY(max(0, min(new_pos.y(), max_y)))
+
+            self.move(new_pos)
+            event.accept()
+
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._dragging = False
+            self._drag_offset = None
+            self.setCursor(Qt.OpenHandCursor)
+            event.accept()
 
 
