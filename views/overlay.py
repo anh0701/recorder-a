@@ -36,7 +36,7 @@ class Overlay(QWidget):
     
     def confirm_exit(self):
         ret = QMessageBox.question(
-            None,
+            self,
             "Exit",
             "Thoát ứng dụng?",
             QMessageBox.Yes | QMessageBox.No
