@@ -29,6 +29,8 @@ class Settings:
 
     MODE_FREE = "free"
     MODE_RATIO = "ratio"
+    CAPTURE_ONE_SCREEN = "one_screen"
+    CAPTURE_ALL_SCREEN = "all_screen"
 
     RATIO_16_9 = 16 / 9
     RATIO_9_16 = 9 / 16
@@ -37,6 +39,9 @@ class Settings:
     APP_NAME = "MyRecorder"
 
     def __post_init__(self):
+        self.capture_scope = None
+        self.screen_index = 0
+        
         if self.output_dir is None:
             self.output_dir = self._default_output_dir()
 

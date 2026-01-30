@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QButtonGroup
+from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QButtonGroup, QFrame
 from models.settings import Settings
 from views.settings_window import SettingsWindow
 from PySide6.QtCore import Qt, Signal
@@ -61,6 +61,31 @@ class ModeBar(QWidget):
             self.id_to_value[id_] = value
 
         self.group.button(0).setChecked(True)
+        
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setStyleSheet("color: rgba(255,255,255,60);")
+        layout.addWidget(sep)
+        self.screen_group = QButtonGroup(self)
+        self.screen_group.setExclusive(True)
+        self.screen_group.idClicked.connect(self._on_screen_scope)
+
+        self.screen_id_to_value = {}
+
+        screen_modes = [
+            (0, "1 Screen", Settings.CAPTURE_ONE_SCREEN),
+            (1, "All Screen", Settings.CAPTURE_ALL_SCREEN),
+        ]
+
+        for id_, text, value in screen_modes:
+            btn = QPushButton(text)
+            btn.setCheckable(True)
+            layout.addWidget(btn)
+
+            self.screen_group.addButton(btn, id_)
+            self.screen_id_to_value[id_] = value
+
+        self.screen_group.button(0).setChecked(True)
 
         layout.addStretch()
         settings_btn = QPushButton("⚙")
@@ -146,5 +171,8 @@ class ModeBar(QWidget):
             self._drag_offset = None
             self.setCursor(Qt.OpenHandCursor)
             event.accept()
+
+    def _on_screen_scope(self, id_: int):
+        self.settings.capture_scope = self.screen_id_to_value[id_]
 
 

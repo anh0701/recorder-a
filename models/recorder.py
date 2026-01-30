@@ -2,13 +2,17 @@ import subprocess
 import signal
 from models.settings import AudioMode, Settings, TEST_MODE
 from models.audio_manager import AudioManager
+from PySide6.QtGui import QGuiApplication
+
 
 class Recorder:
     def __init__(self, rect, settings: Settings):
-        self.x = rect.x()
-        self.y = rect.y()
-        self.w = rect.width()
-        self.h = rect.height()
+        self.rect = rect
+        if rect:
+            self.x = rect.x()
+            self.y = rect.y()
+            self.w = rect.width()
+            self.h = rect.height()
 
         self.settings = settings
         self.process = None
@@ -26,13 +30,31 @@ class Recorder:
 
         output_file = self.settings.generate_output_file()
 
+        if self.settings.capture_scope == Settings.CAPTURE_ONE_SCREEN:
+            screen = QGuiApplication.screens()[self.settings.screen_index]
+            geo = screen.geometry()
+            x, y = geo.x(), geo.y()
+            w, h = geo.width(), geo.height()
+        elif self.settings.capture_scope == Settings.CAPTURE_ALL_SCREEN:
+            screens = QGuiApplication.screens()
+            xs = [s.geometry().x() for s in screens]
+            ys = [s.geometry().y() for s in screens]
+            rs = [s.geometry().right() for s in screens]
+            bs = [s.geometry().bottom() for s in screens]
+
+            x, y = min(xs), min(ys)
+            w = max(rs) - x + 1
+            h = max(bs) - y + 1
+        else:
+            x, y, w, h = self.x, self.y, self.w, self.h
+
         cmd = [
             "ffmpeg",
             "-y",
-            "-video_size", f"{self.w}x{self.h}",
+            "-video_size", f"{w}x{h}",
             "-framerate", str(self.settings.fps),
             "-f", "x11grab",
-            "-i", f":0.0+{self.x},{self.y}",
+            "-i", f":0.0+{x},{y}",
         ]
 
         if self.settings.audio_mode != AudioMode.NONE:
@@ -40,6 +62,8 @@ class Recorder:
             cmd += ["-f", "pulse", "-i", audio_source]
 
         cmd.append(str(output_file))
+
+        print("[FFMPEG CMD]", " ".join(cmd))
 
         self.process = subprocess.Popen(
             cmd,
@@ -57,3 +81,5 @@ class Recorder:
             self.process = None
         
         self.audio.cleanup()
+
+

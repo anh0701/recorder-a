@@ -109,6 +109,10 @@ class Overlay(QWidget):
         if value == Settings.MODE_FREE:
             self.mode = Settings.MODE_FREE
             self.ratio = None
+        elif value in (Settings.CAPTURE_ONE_SCREEN, Settings.CAPTURE_ALL_SCREEN):
+            self.settings.capture_scope = value
+            self.close()
+            self.on_done(None)
         else:
             self.mode = Settings.MODE_RATIO
             self.ratio = value
