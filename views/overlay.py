@@ -18,6 +18,7 @@ class Overlay(QWidget):
         self.dragging = False
         self.mode = Settings.MODE_FREE
         self.ratio = None
+        self.min_size = 10
 
         self.setWindowFlags(
             Qt.FramelessWindowHint |
@@ -78,10 +79,18 @@ class Overlay(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, e):
+        if not self.dragging:
+            return
+        
         if self.dragging:
             self.dragging = False
             rect = QRect(self.start, self.end).normalized()
             rect = self.clamp_rect_to_screen(rect)
+
+            if rect.width() < self.min_size or rect.height() < self.min_size:
+                self.update()
+                return
+            
             self.close()
             self.on_done(rect)
 
