@@ -1,7 +1,7 @@
 import subprocess
 import signal
 from models.settings import AudioMode, Settings, TEST_MODE
-
+from audio_manager import AudioManager
 
 class Recorder:
     def __init__(self, rect, settings: Settings):
@@ -12,6 +12,7 @@ class Recorder:
 
         self.settings = settings
         self.process = None
+        self.audio = AudioManager()
 
     def start(self):
         if TEST_MODE:
@@ -34,17 +35,9 @@ class Recorder:
             "-i", f":0.0+{self.x},{self.y}",
         ]
 
-        if self.settings.audio_mode == AudioMode.SYSTEM:
-            cmd += ["-f", "pulse", "-i", "default"]
-
-        elif self.settings.audio_mode == AudioMode.MIC:
-            cmd += ["-f", "pulse", "-i", "alsa_input"]
-
-        elif self.settings.audio_mode == AudioMode.BOTH:
-            cmd += [
-                "-f", "pulse", "-i", "default",
-                "-f", "pulse", "-i", "alsa_input"
-            ]
+        if self.settings.audio_mode != AudioMode.NONE:
+            audio_source = self.audio.prepare(self.settings.audio_mode)
+            cmd += ["-f", "pulse", "-i", audio_source]
 
         cmd.append(str(output_file))
 
@@ -62,3 +55,5 @@ class Recorder:
             self.process.send_signal(signal.SIGINT)
             self.process.wait()
             self.process = None
+        
+        self.audio.cleanup()
