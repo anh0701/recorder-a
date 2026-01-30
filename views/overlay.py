@@ -1,11 +1,9 @@
-from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, QRect, QPoint
+from PySide6.QtWidgets import QWidget, QLabel, QMessageBox, QApplication
+from PySide6.QtCore import Qt, QRect, QPoint, QTimer
 from PySide6.QtGui import QPainter, QPen, QColor
 from models.settings import Settings
 from views.mode_bar import ModeBar
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QRect
-from PySide6.QtWidgets import QMessageBox, QApplication
 import sys
 
 class Overlay(QWidget):
@@ -34,12 +32,24 @@ class Overlay(QWidget):
         self.mode_bar.setParent(self)
         self.mode_bar.move(20, 20)
         self.mode_bar.show()
+
+        self.hint = QLabel("Click and drag to select the recording area", self)
+        self.hint.setStyleSheet("""
+            background-color: rgba(30, 30, 30, 220);
+            color: white;
+            border: 1px solid rgb(255, 80, 80);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+        """)
+        self.hint.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.hint.hide()
     
     def confirm_exit(self):
         ret = QMessageBox.question(
             self,
             "Exit",
-            "Thoát ứng dụng?",
+            "Do you want to exit the application?",
             QMessageBox.Yes | QMessageBox.No
         )
         if ret == QMessageBox.Yes:
@@ -88,6 +98,7 @@ class Overlay(QWidget):
             rect = self.clamp_rect_to_screen(rect)
 
             if rect.width() < self.min_size or rect.height() < self.min_size:
+                self.show_hint(e.position().toPoint())
                 self.update()
                 return
             
@@ -120,3 +131,13 @@ class Overlay(QWidget):
         h = min(rect.height(), screen_rect.bottom() - y + 1)
 
         return QRect(x, y, w, h)
+
+    def show_hint(self, pos: QPoint):
+        self.hint.adjustSize()
+
+        self.hint.move(pos + QPoint(12, 12))
+        self.hint.show()
+        self.hint.raise_()
+
+        QTimer.singleShot(1500, self.hint.hide)
+
