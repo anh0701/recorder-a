@@ -12,6 +12,14 @@ class AudioMode(Enum):
     MIC = "mic"
     BOTH = "both"
 
+class CaptureMode(Enum):
+    FREE = "free"
+    RATIO_16_9 = "16:9"
+    RATIO_9_16 = "9:16"
+    RATIO_1_1 = "1:1"
+    ONE_SCREEN = "one_screen"
+    ALL_SCREEN = "all_screen"
+
 # CONFIG_FILE = Path.home() / ".myrecorder.json"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +34,7 @@ class Settings:
     fps: int = 30
     audio_mode: AudioMode = AudioMode.NONE
     output_dir: Path | None = None
+    capture_mode: CaptureMode = CaptureMode.FREE
 
     MODE_FREE = "free"
     MODE_RATIO = "ratio"

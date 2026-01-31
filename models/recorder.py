@@ -20,13 +20,21 @@ class Recorder:
 
     def start(self):
         if TEST_MODE:
-            print(
-                f"[TEST] start {self.w}x{self.h} "
-                f"@ {self.x},{self.y}, "
-                f"fps={self.settings.fps}, "
-                f"audio={self.settings.audio_mode}"
-            )
-            return
+            if self.rect:
+                print(
+                    f"[TEST] start {self.w}x{self.h} "
+                    f"@ {self.x},{self.y}, "
+                    f"fps={self.settings.fps}, "
+                    f"audio={self.settings.audio_mode}"
+                )
+                return
+            else:
+                print(
+                    f"[TEST] start "
+                    f"fps={self.settings.fps}, "
+                    f"audio={self.settings.audio_mode}"
+                )
+                return
 
         output_file = self.settings.generate_output_file()
 
