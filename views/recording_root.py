@@ -7,8 +7,9 @@ SAFE   = 1
 
 
 class RecordingRootWindow(QWidget):
-    def __init__(self, rect: QRect):
+    def __init__(self, rect: QRect, draw_border: bool = True):
         super().__init__()
+        self.draw_border = draw_border
 
         self.setGeometry(
             rect.x() - BORDER - SAFE,
@@ -27,6 +28,8 @@ class RecordingRootWindow(QWidget):
         self.show()
 
     def paintEvent(self, _):
+        if not self.draw_border:
+            return
         p = QPainter(self)
 
         pen = QPen(QColor(255, 80, 80))

@@ -39,7 +39,7 @@ def on_region_selected(rect):
     if settings.capture_scope == CaptureMode.ONE_SCREEN:
         screen = QGuiApplication.screens()[settings.screen_index]
         geo = screen.geometry()
-        recording_root = RecordingRootWindow(geo)
+        recording_root = RecordingRootWindow(geo, draw_border=False)
         stop_bar = StopBarWindow(geo.x() + 10, geo.y() + 10, stop_app)
 
     elif settings.capture_scope == CaptureMode.ALL_SCREEN:
@@ -54,11 +54,11 @@ def on_region_selected(rect):
         h = max(bs) - y + 1
 
         rect = QRect(x, y, w, h)
-        recording_root = RecordingRootWindow(rect)
+        recording_root = RecordingRootWindow(rect, draw_border=False)
         stop_bar = StopBarWindow(x + 10, y + 10, stop_app)
 
     else:
-        recording_root = RecordingRootWindow(rect)
+        recording_root = RecordingRootWindow(rect, draw_border=True)
         stop_bar = StopBarWindow(rect.x() + 10, rect.y() + 10, stop_app)
 
 

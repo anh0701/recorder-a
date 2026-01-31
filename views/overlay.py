@@ -126,14 +126,6 @@ class Overlay(QWidget):
         elif value == CaptureMode.RATIO_1_1:
             self.mode = value
             self.ratio = 1.0
-
-
-    def paintEvent(self, _):
-        p = QPainter(self)
-        p.fillRect(self.rect(), QColor(0, 0, 0, 120))
-        if self.dragging:
-            p.setPen(QPen(QColor(255, 80, 80), 2))
-            p.drawRect(QRect(self.start, self.end).normalized())
     
     def clamp_rect_to_screen(self, rect: QRect) -> QRect:
         screen = QGuiApplication.primaryScreen()
