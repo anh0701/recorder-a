@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QLabel, QMessageBox, QApplication
 from PySide6.QtCore import Qt, QRect, QPoint, QTimer
 from PySide6.QtGui import QPainter, QPen, QColor
-from models.settings import Settings
+from models.settings import Settings, CaptureMode
 from views.mode_bar import ModeBar
 from PySide6.QtGui import QGuiApplication
 import sys
@@ -14,7 +14,7 @@ class Overlay(QWidget):
         self.start = QPoint()
         self.end = QPoint()
         self.dragging = False
-        self.mode = Settings.MODE_FREE
+        self.mode = CaptureMode.FREE
         self.ratio = None
         self.min_size = 10
 
@@ -74,7 +74,7 @@ class Overlay(QWidget):
         dx = pos.x() - self.start.x()
         dy = pos.y() - self.start.y()
 
-        if self.mode != Settings.MODE_FREE:
+        if self.mode != CaptureMode.FREE:
             if abs(dx) > abs(dy):
                 dy = int(abs(dx) / self.ratio) * (1 if dy >= 0 else -1)
             else:
@@ -105,17 +105,28 @@ class Overlay(QWidget):
             self.close()
             self.on_done(rect)
 
-    def set_mode(self, value):
-        if value == Settings.MODE_FREE:
-            self.mode = Settings.MODE_FREE
+    def set_mode(self, value: CaptureMode):
+        if value == CaptureMode.FREE:
+            self.mode = CaptureMode.FREE
             self.ratio = None
-        elif value in (Settings.CAPTURE_ONE_SCREEN, Settings.CAPTURE_ALL_SCREEN):
+
+        elif value in (CaptureMode.ONE_SCREEN, CaptureMode.ALL_SCREEN):
             self.settings.capture_scope = value
             self.close()
             self.on_done(None)
-        else:
-            self.mode = Settings.MODE_RATIO
-            self.ratio = value
+
+        elif value == CaptureMode.RATIO_16_9:
+            self.mode = value
+            self.ratio = 16 / 9
+
+        elif value == CaptureMode.RATIO_9_16:
+            self.mode = value
+            self.ratio = 9 / 16
+
+        elif value == CaptureMode.RATIO_1_1:
+            self.mode = value
+            self.ratio = 1.0
+
 
     def paintEvent(self, _):
         p = QPainter(self)

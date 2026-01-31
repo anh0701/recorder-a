@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QButtonGroup, QFrame
-from models.settings import Settings
+from models.settings import Settings, CaptureMode
 from views.settings_window import SettingsWindow
 from PySide6.QtCore import Qt, Signal
 
@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, Signal
 class ModeBar(QWidget):
     closeRequested = Signal()
 
-    def __init__(self, on_change, settings):
+    def __init__(self, on_change, settings: Settings):
         super().__init__()
         self.on_change = on_change
         self.settings_win = None
@@ -48,15 +48,15 @@ class ModeBar(QWidget):
 
         modes = [
             # id, text, value
-            (0, "FREE",      Settings.MODE_FREE),
-            (1, "16:9",      Settings.RATIO_16_9),
-            (2, "9:16",      Settings.RATIO_9_16),
-            (3, "1:1",       Settings.RATIO_1_1),
+            (0, "FREE",      CaptureMode.FREE),
+            (1, "16:9",      CaptureMode.RATIO_16_9),
+            (2, "9:16",      CaptureMode.RATIO_9_16),
+            (3, "1:1",       CaptureMode.RATIO_1_1),
 
             ("sep", None, None),
 
-            (4, "1 Screen",  Settings.CAPTURE_ONE_SCREEN),
-            (5, "All Screen",Settings.CAPTURE_ALL_SCREEN),
+            (4, "1 Screen",  CaptureMode.ONE_SCREEN),
+            (5, "All Screen",CaptureMode.ALL_SCREEN),
         ]
 
         for item in modes:
@@ -111,8 +111,8 @@ class ModeBar(QWidget):
         self.settings.capture_scope = None
 
         if value in (
-            Settings.CAPTURE_ONE_SCREEN,
-            Settings.CAPTURE_ALL_SCREEN
+            CaptureMode.ONE_SCREEN,
+            CaptureMode.ALL_SCREEN
         ):
             self.settings.capture_scope = value
             self.on_change(value)

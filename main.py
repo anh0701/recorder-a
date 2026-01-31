@@ -4,7 +4,7 @@ from views.overlay import Overlay
 from views.recording_root import RecordingRootWindow
 from views.stop_bar import StopBarWindow
 from models.recorder import Recorder
-from models.settings import Settings, load_settings
+from models.settings import Settings, load_settings, CaptureMode
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import QRect
 
@@ -36,13 +36,13 @@ def on_region_selected(rect):
 
     recorder.start()
 
-    if settings.capture_scope == Settings.CAPTURE_ONE_SCREEN:
+    if settings.capture_scope == CaptureMode.ONE_SCREEN:
         screen = QGuiApplication.screens()[settings.screen_index]
         geo = screen.geometry()
         recording_root = RecordingRootWindow(geo)
         stop_bar = StopBarWindow(geo.x() + 10, geo.y() + 10, stop_app)
 
-    elif settings.capture_scope == Settings.CAPTURE_ALL_SCREEN:
+    elif settings.capture_scope == CaptureMode.ALL_SCREEN:
         screens = QGuiApplication.screens()
         xs = [s.geometry().x() for s in screens]
         ys = [s.geometry().y() for s in screens]

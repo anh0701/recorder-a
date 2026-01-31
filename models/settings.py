@@ -36,14 +36,6 @@ class Settings:
     output_dir: Path | None = None
     capture_mode: CaptureMode = CaptureMode.FREE
 
-    MODE_FREE = "free"
-    MODE_RATIO = "ratio"
-    CAPTURE_ONE_SCREEN = "one_screen"
-    CAPTURE_ALL_SCREEN = "all_screen"
-
-    RATIO_16_9 = 16 / 9
-    RATIO_9_16 = 9 / 16
-    RATIO_1_1 = 1
 
     APP_NAME = "MyRecorder"
 

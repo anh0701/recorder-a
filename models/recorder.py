@@ -1,6 +1,6 @@
 import subprocess
 import signal
-from models.settings import AudioMode, Settings, TEST_MODE
+from models.settings import AudioMode, Settings, TEST_MODE, CaptureMode
 from models.audio_manager import AudioManager
 from PySide6.QtGui import QGuiApplication
 
@@ -38,12 +38,12 @@ class Recorder:
 
         output_file = self.settings.generate_output_file()
 
-        if self.settings.capture_scope == Settings.CAPTURE_ONE_SCREEN:
+        if self.settings.capture_scope == CaptureMode.ONE_SCREEN:
             screen = QGuiApplication.screens()[self.settings.screen_index]
             geo = screen.geometry()
             x, y = geo.x(), geo.y()
             w, h = geo.width(), geo.height()
-        elif self.settings.capture_scope == Settings.CAPTURE_ALL_SCREEN:
+        elif self.settings.capture_scope == CaptureMode.ALL_SCREEN:
             screens = QGuiApplication.screens()
             xs = [s.geometry().x() for s in screens]
             ys = [s.geometry().y() for s in screens]
