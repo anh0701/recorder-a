@@ -84,9 +84,14 @@ class Recorder:
             return
 
         if self.process:
-            self.process.send_signal(signal.SIGINT)
-            self.process.wait()
-            self.process = None
+            try:
+                self.process.terminate()
+                self.process.wait()
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
+            finally:
+                self.process = None
         
         self.audio.cleanup()
 
