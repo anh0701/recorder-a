@@ -1,5 +1,18 @@
 # recorder
 
+<table>
+       <tr>
+              <td><img src="demo1.png" width="250"/></td>
+              <td><img src="demo2.png" width="250"/></td>
+              <td><img src="demo3.png" width="250"/></td>
+       </tr>
+       <tr>
+              <td><img src="demo4.png" width="250"/></td>
+              <td><img src="demo5.png" width="250"/></td>
+              <td></td>
+       </tr>
+</table>
+
 ```sh
 ┌──────────────┐
 │   UI Layer   │  ← chọn vùng / preset
