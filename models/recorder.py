@@ -63,6 +63,10 @@ class Recorder:
             "-framerate", str(self.settings.fps),
             "-f", "x11grab",
             "-i", f":0.0+{x},{y}",
+            "-c:v", "libx264",        # encoder H.264
+            "-crf", "18",             
+            "-preset", "ultrafast",   
+            "-pix_fmt", "yuv420p",
         ]
 
         if self.settings.audio_mode != AudioMode.NONE:
