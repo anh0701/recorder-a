@@ -63,6 +63,7 @@ class Recorder:
             "-framerate", str(self.settings.fps),
             "-f", "x11grab",
             "-i", f":0.0+{x},{y}",
+            "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", # libx264 + yuv420p yêu cầu width và height phải chia hết cho 2.
             "-c:v", "libx264",        # encoder H.264
             "-crf", "18",             
             "-preset", "ultrafast",   
