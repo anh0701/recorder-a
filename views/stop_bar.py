@@ -10,7 +10,12 @@ from PySide6.QtCore import (
     QPoint,
     Signal,
 )
-from PySide6.QtGui import QEnterEvent
+from PySide6.QtGui import (
+    QEnterEvent,
+    QPainter,
+    QPen,
+    QBrush,
+)
 
 
 class StopBarWindow(QWidget):
@@ -39,6 +44,11 @@ class StopBarWindow(QWidget):
 
         self.idle_timeout = 3000
 
+        # Mode
+        # False = full
+        # True = compact
+        self.compact_mode = False
+
         # Window
 
         self.setWindowFlags(
@@ -53,15 +63,8 @@ class StopBarWindow(QWidget):
 
         self.setMouseTracking(True)
 
-        # Style
 
         self.setStyleSheet("""
-            QWidget#StopBar {
-                background: rgba(25, 25, 25, 245);
-                border: 1px solid rgba(255, 255, 255, 110);
-                border-radius: 9px;
-            }
-
             QLabel {
                 color: white;
                 font-weight: bold;
@@ -217,6 +220,66 @@ class StopBarWindow(QWidget):
 
         self.show()
 
+    def paintEvent(self, event):
+
+        painter = QPainter(
+            self
+        )
+
+        painter.setRenderHint(
+            QPainter.Antialiasing
+        )
+
+        # Leave a little space for the border
+        rect = self.rect().adjusted(
+            1,
+            1,
+            -1,
+            -1,
+        )
+
+        if self.compact_mode:
+
+            painter.setBrush(
+                QBrush(
+                    Qt.black
+                )
+            )
+
+            painter.setPen(
+                QPen(
+                    Qt.white,
+                    1
+                )
+            )
+
+            radius = 8
+
+        else:
+
+            painter.setBrush(
+                QBrush(
+                    Qt.black
+                )
+            )
+
+            painter.setPen(
+                QPen(
+                    Qt.white,
+                    2
+                )
+            )
+
+            radius = 10
+
+        painter.drawRoundedRect(
+            rect,
+            radius,
+            radius,
+        )
+
+        painter.end()
+
 
     def update_timer(self):
 
@@ -306,6 +369,10 @@ class StopBarWindow(QWidget):
             self.restart_idle_timer()
             return
 
+        # Change mode
+
+        self.compact_mode = True
+
         # Hide controls
         self.pause_button.hide()
         self.stop_button.hide()
@@ -314,14 +381,8 @@ class StopBarWindow(QWidget):
         # Keep timer visible
         self.timer_label.show()
 
-        # Compact style
+        # Compact text style
         self.setStyleSheet("""
-            QWidget#StopBar {
-                background: rgba(25, 25, 25, 150);
-                border: 1px solid rgba(255, 255, 255, 90);
-                border-radius: 8px;
-            }
-
             QLabel {
                 color: rgba(255, 255, 255, 200);
                 font-weight: bold;
@@ -330,45 +391,50 @@ class StopBarWindow(QWidget):
 
         self.adjustSize()
 
+        self.update()
+
+
     def show_full_mode(self):
+
+        # Change mode
+
+        self.compact_mode = False
+
+        # Show controls
 
         self.pause_button.show()
         self.stop_button.show()
         self.rec_label.show()
 
-        self.setStyleSheet("""
-            QWidget#StopBar {
-                background: rgba(25, 25, 25, 245);
-                border: 1px solid rgba(255, 255, 255, 110);
-                border-radius: 9px;
-            }
+        # Full text style
 
+        self.setStyleSheet("""
             QLabel {
                 color: white;
                 font-weight: bold;
             }
 
             QLabel#recLabel {
-                color: rgb(255, 75, 75);
+                color: rgb(255, 70, 70);
             }
 
             QPushButton {
                 background: rgba(255, 255, 255, 25);
                 color: white;
-                border: 1px solid rgba(255, 255, 255, 70);
+                border: none;
                 padding: 5px 9px;
                 border-radius: 6px;
             }
 
             QPushButton:hover {
                 background: rgba(255, 255, 255, 55);
-                border: 1px solid rgba(255, 255, 255, 130);
+                border: none;
             }
 
             QPushButton#stopButton {
                 background: rgb(220, 55, 55);
                 color: white;
-                border: 1px solid rgb(255, 110, 110);
+                border: 1px solid rgb(255, 120, 120);
             }
 
             QPushButton#stopButton:hover {
@@ -377,6 +443,8 @@ class StopBarWindow(QWidget):
         """)
 
         self.adjustSize()
+
+        self.update()
 
 
     def restart_idle_timer(self):
@@ -421,7 +489,7 @@ class StopBarWindow(QWidget):
             .toPoint()
         )
 
-        self.window_start = self.pos()
+        self.window_start = (self.pos())
 
         event.accept()
 
@@ -460,8 +528,7 @@ class StopBarWindow(QWidget):
             self.restart_idle_timer()
 
         event.accept()
-
-    
+        
     def closeEvent(self, event):
 
         self.record_timer.stop()
