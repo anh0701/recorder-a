@@ -9,7 +9,7 @@
        <tr>
               <td><img src="demo4.png" width="250"/></td>
               <td><img src="demo5.png" width="250"/></td>
-              <td></td>
+              <td><img src="demo6.png" width="250"/></td>
        </tr>
 </table>
 
