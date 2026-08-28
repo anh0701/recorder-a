@@ -6,9 +6,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import (
     Qt,
-    QRect,
     QPoint,
     QTimer,
+    QRect,
 )
 from PySide6.QtGui import (
     QPainter,
@@ -16,28 +16,22 @@ from PySide6.QtGui import (
     QColor,
     QGuiApplication,
 )
+
 from models.settings import Settings, CaptureMode
 from views.mode_bar import ModeBar
+from views.selection import SelectionController
+from views.selection_toolbar import SelectionToolbar
 
 
 class Overlay(QWidget):
+
+    HANDLE_SIZE = 10
+
     def __init__(self, on_done, settings: Settings):
         super().__init__()
 
         self.on_done = on_done
         self.settings = settings
-
-        # Selection state
-
-        self.start = QPoint()
-        self.end = QPoint()
-
-        self.dragging = False
-
-        self.mode = CaptureMode.FREE
-        self.ratio = None
-
-        self.min_size = 10
 
         # Window
 
@@ -57,13 +51,29 @@ class Overlay(QWidget):
             True
         )
 
+        self.setMouseTracking(True)
+
         self.showFullScreen()
 
-        # Mode bar
+        # Selection controller
+
+        self.selection_controller = (
+            SelectionController(
+                self.get_screen_rect(),
+                min_size=20,
+            )
+        )
+
+        self.mode = CaptureMode.FREE
+        self.ratio = None
+
+        # Creating a new selection
+        self.creating = False
+
 
         self.mode_bar = ModeBar(
             self.set_mode,
-            self.settings
+            self.settings,
         )
 
         self.mode_bar.closeRequested.connect(
@@ -74,11 +84,10 @@ class Overlay(QWidget):
         self.mode_bar.move(20, 20)
         self.mode_bar.show()
 
-        # Initial hint
 
         self.hint = QLabel(
             "Click and drag to select the recording area",
-            self
+            self,
         )
 
         self.hint.setStyleSheet("""
@@ -96,16 +105,18 @@ class Overlay(QWidget):
 
         self.hint.hide()
 
-        # Size label
 
-        self.size_label = QLabel(self)
+        self.size_label = QLabel(
+            self,
+        )
 
         self.size_label.setStyleSheet("""
-            background-color: rgba(30, 30, 30, 220);
+            background-color: rgba(30, 30, 30, 230);
             color: white;
             border-radius: 5px;
             padding: 4px 8px;
             font-size: 12px;
+            font-weight: bold;
         """)
 
         self.size_label.setAttribute(
@@ -114,106 +125,220 @@ class Overlay(QWidget):
 
         self.size_label.hide()
 
-    # Exit
+
+        self.selection_toolbar = (
+            SelectionToolbar(self)
+        )
+
+        self.selection_toolbar.confirmed.connect(
+            self.confirm_selection
+        )
+
+        self.selection_toolbar.cancelled.connect(
+            self.cancel_selection
+        )
+
+        self.selection_toolbar.hide()
+
+        self.setCursor(
+            Qt.CrossCursor
+        )
+
 
     def confirm_exit(self):
+
         ret = QMessageBox.question(
             self,
             "Exit",
             "Do you want to exit the application?",
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.Yes
+            | QMessageBox.No,
         )
 
         if ret == QMessageBox.Yes:
             QApplication.quit()
 
-    # Mouse events
 
     def mousePressEvent(self, event):
+
         if event.button() != Qt.LeftButton:
-            return
-
-        # Hide previous hint
-        self.hint.hide()
-
-        self.dragging = True
-
-        self.start = event.position().toPoint()
-        self.end = self.start
-
-        self.size_label.hide()
-
-        self.update()
-
-    def mouseMoveEvent(self, event):
-        if not self.dragging:
             return
 
         pos = event.position().toPoint()
 
-        screen_rect = self.get_screen_rect()
+        controller = self.selection_controller
 
-        # Keep cursor inside current screen
-        pos.setX(
-            max(
-                screen_rect.left(),
-                min(pos.x(), screen_rect.right())
-            )
-        )
+        # Existing selection
 
-        pos.setY(
-            max(
-                screen_rect.top(),
-                min(pos.y(), screen_rect.bottom())
-            )
-        )
+        if controller.is_valid():
 
-        # Free selection
-
-        if self.mode == CaptureMode.FREE:
-            self.end = pos
-
-        # Fixed aspect ratio
-
-        else:
-            self.end = self.calculate_ratio_endpoint(
-                pos,
-                screen_rect
+            # Try resize handle first
+            handle = controller.get_handle_at(
+                pos
             )
 
-        # Repaint immediately
+            if handle:
+
+                controller.start_resize(
+                    handle,
+                    pos,
+                )
+
+                self.creating = False
+
+                self.size_label.show()
+
+                self.setCursor(
+                    self.cursor_for_handle(
+                        handle
+                    )
+                )
+
+                event.accept()
+                return
+
+            # Try moving selection
+            if controller.start_move(pos):
+
+                self.creating = False
+
+                self.setCursor(
+                    Qt.ClosedHandCursor
+                )
+
+                event.accept()
+                return
+
+            # Clicked outside existing selection.
+            # Start a new selection.
+
+            controller.reset()
+
+            self.selection_toolbar.hide_for_selection()
+            self.size_label.hide()
+
+        # Start creating selection
+
+        self.hint.hide()
+
+        self.creating = True
+
+        self.create_start = pos
+
+        controller.reset()
+
+        self.selection_toolbar.hide_for_selection()
+
         self.update()
 
-        # Update size indicator
+        event.accept()
+
+
+    def mouseMoveEvent(self, event):
+
+        pos = event.position().toPoint()
+
+        controller = self.selection_controller
+
+        # Not dragging
+
+        if not self.creating and controller.action is None:
+
+            if controller.is_valid():
+
+                handle = controller.get_handle_at(
+                    pos
+                )
+
+                if handle:
+
+                    self.setCursor(
+                        self.cursor_for_handle(
+                            handle
+                        )
+                    )
+
+                elif controller.selection.contains(pos):
+
+                    self.setCursor(
+                        Qt.OpenHandCursor
+                    )
+
+                else:
+
+                    self.setCursor(
+                        Qt.CrossCursor
+                    )
+
+            else:
+
+                self.setCursor(
+                    Qt.CrossCursor
+                )
+
+            return
+
+        # Creating
+
+        if self.creating:
+
+            controller.create(
+                self.create_start,
+                pos,
+            )
+
+        # Moving
+
+        elif controller.action == "move":
+
+            controller.move(
+                pos
+            )
+
+        # Resizing
+
+        else:
+
+            controller.resize(
+                pos
+            )
+
         self.update_size_label()
 
+        self.update()
+
+        event.accept()
+
+
     def mouseReleaseEvent(self, event):
+
         if event.button() != Qt.LeftButton:
             return
 
-        if not self.dragging:
-            return
+        controller = self.selection_controller
 
-        self.dragging = False
+        # Finish creating
+        self.creating = False
 
-        rect = QRect(
-            self.start,
-            self.end
-        ).normalized()
-
-        rect = self.clamp_rect_to_screen(rect)
-
-        # Hide realtime size label
-        self.size_label.hide()
+        # Finish move / resize
+        controller.finish_action()
 
         # Invalid selection
 
-        if (
-            rect.width() < self.min_size
-            or rect.height() < self.min_size
-        ):
+        if not controller.is_valid():
+
+            controller.reset()
+
+            self.size_label.hide()
+
+            self.selection_toolbar.hide_for_selection()
+
             self.show_hint(
                 event.position().toPoint()
+            )
+
+            self.setCursor(
+                Qt.CrossCursor
             )
 
             self.update()
@@ -221,220 +346,85 @@ class Overlay(QWidget):
             return
 
         # Valid selection
+        # DO NOT start recording here.
+
+        self.update_size_label()
+
+        self.show_selection_toolbar()
+
+        self.setCursor(
+            Qt.OpenHandCursor
+        )
+
+        self.update()
+
+        event.accept()
+
+
+    def confirm_selection(self):
+
+        controller = self.selection_controller
+
+        if not controller.is_valid():
+            return
+
+        rect = controller.clamp_rect_to_screen(
+            controller.selection
+        )
+
+        if (
+            rect.width() < controller.min_size
+            or rect.height() < controller.min_size
+        ):
+            return
+
+        # Only now close overlay and start recording.
 
         self.close()
 
-        self.on_done(rect)
-
-    # Aspect ratio
-
-    def calculate_ratio_endpoint(
-        self,
-        pos: QPoint,
-        screen_rect: QRect
-    ) -> QPoint:
-
-        dx = pos.x() - self.start.x()
-        dy = pos.y() - self.start.y()
-
-        if dx == 0 and dy == 0:
-            return self.start
-
-        ratio = self.ratio
-
-        if ratio is None or ratio <= 0:
-            return pos
-
-        abs_dx = abs(dx)
-        abs_dy = abs(dy)
-
-        # Determine which dimension controls the size.
-
-        if abs_dx / max(abs_dy, 1) > ratio:
-            # Width is controlling dimension
-            width = abs_dx
-            height = int(width / ratio)
-        else:
-            # Height is controlling dimension
-            height = abs_dy
-            width = int(height * ratio)
-
-        # Preserve drag direction
-        direction_x = 1 if dx >= 0 else -1
-        direction_y = 1 if dy >= 0 else -1
-
-        width = max(width, self.min_size)
-        height = max(height, self.min_size)
-
-        # Limit size based on available space
-
-        max_width = self.get_max_width(
-            direction_x,
-            screen_rect
+        self.on_done(
+            rect
         )
 
-        max_height = self.get_max_height(
-            direction_y,
-            screen_rect
+
+    def cancel_selection(self):
+
+        self.selection_controller.reset()
+
+        self.creating = False
+
+        self.size_label.hide()
+
+        self.selection_toolbar.hide_for_selection()
+
+        self.setCursor(
+            Qt.CrossCursor
         )
 
-        # We need to respect both width and height limits.
-        max_width_by_height = int(
-            max_height * ratio
-        )
+        self.update()
 
-        max_height_by_width = int(
-            max_width / ratio
-        )
 
-        max_allowed_width = min(
-            max_width,
-            max_width_by_height
-        )
+    def show_selection_toolbar(self):
 
-        max_allowed_height = min(
-            max_height,
-            max_height_by_width
-        )
+        controller = self.selection_controller
 
-        if width > max_allowed_width:
-            width = max_allowed_width
-            height = int(width / ratio)
-
-        if height > max_allowed_height:
-            height = max_allowed_height
-            width = int(height * ratio)
-
-        width = max(width, 1)
-        height = max(height, 1)
-
-        # Calculate final endpoint
-
-        end_x = (
-            self.start.x()
-            + direction_x * width
-        )
-
-        end_y = (
-            self.start.y()
-            + direction_y * height
-        )
-
-        return QPoint(
-            end_x,
-            end_y
-        )
-
-    # Maximum available size
-
-    def get_max_width(
-        self,
-        direction: int,
-        screen_rect: QRect
-    ) -> int:
-
-        if direction >= 0:
-            return (
-                screen_rect.right()
-                - self.start.x()
-                + 1
-            )
-
-        return (
-            self.start.x()
-            - screen_rect.left()
-            + 1
-        )
-
-    def get_max_height(
-        self,
-        direction: int,
-        screen_rect: QRect
-    ) -> int:
-
-        if direction >= 0:
-            return (
-                screen_rect.bottom()
-                - self.start.y()
-                + 1
-            )
-
-        return (
-            self.start.y()
-            - screen_rect.top()
-            + 1
-        )
-
-    # Painting
-
-    def paintEvent(self, event):
-        if not self.dragging:
+        if not controller.is_valid():
             return
 
-        rect = QRect(
-            self.start,
-            self.end
-        ).normalized()
-
-        painter = QPainter(self)
-
-        painter.setRenderHint(
-            QPainter.Antialiasing
+        self.selection_toolbar.show_for_selection(
+            controller.selection,
+            self.size(),
         )
-
-        # 1. Dark overlay
-
-        painter.fillRect(
-            self.rect(),
-            QColor(0, 0, 0, 120)
-        )
-
-        # 2. Clear selected area
-
-        painter.setCompositionMode(
-            QPainter.CompositionMode_Clear
-        )
-
-        painter.fillRect(
-            rect,
-            Qt.transparent
-        )
-
-        # 3. Draw border
-
-        painter.setCompositionMode(
-            QPainter.CompositionMode_SourceOver
-        )
-
-        pen = QPen(
-            QColor(255, 80, 80)
-        )
-
-        pen.setWidth(2)
-
-        painter.setPen(pen)
-
-        painter.drawRect(rect)
-
-        painter.end()
-
-    # Size label
 
     def update_size_label(self):
-        if not self.dragging:
-            return
 
-        rect = QRect(
-            self.start,
-            self.end
-        ).normalized()
+        controller = self.selection_controller
 
-        if (
-            rect.width() <= 0
-            or rect.height() <= 0
-        ):
+        if not controller.is_valid():
             self.size_label.hide()
             return
+
+        rect = controller.selection
 
         self.size_label.setText(
             f"{rect.width()} × {rect.height()}"
@@ -442,35 +432,36 @@ class Overlay(QWidget):
 
         self.size_label.adjustSize()
 
-        # Put label underneath the selection
         x = (
             rect.center().x()
             - self.size_label.width() // 2
         )
 
-        y = rect.bottom() + 8
+        y = (
+            rect.bottom()
+            + 10
+        )
 
-        # If there is not enough space underneath,
-        # put it above the selection.
+        # Put above when there is no room below
         if (
             y + self.size_label.height()
             > self.height()
         ):
+
             y = (
                 rect.top()
                 - self.size_label.height()
-                - 8
+                - 10
             )
 
-        # Keep label inside overlay
         x = max(
             5,
             min(
                 x,
                 self.width()
                 - self.size_label.width()
-                - 5
-            )
+                - 5,
+            ),
         )
 
         y = max(
@@ -479,148 +470,411 @@ class Overlay(QWidget):
                 y,
                 self.height()
                 - self.size_label.height()
-                - 5
-            )
+                - 5,
+            ),
         )
 
         self.size_label.move(
             x,
-            y
+            y,
         )
 
         self.size_label.show()
         self.size_label.raise_()
 
-    # Mode
 
-    def set_mode(self, value: CaptureMode):
+    def paintEvent(self, event):
+
+        painter = QPainter(
+            self
+        )
+
+        painter.setRenderHint(
+            QPainter.Antialiasing
+        )
+
+        # Dark overlay
+
+        painter.fillRect(
+            self.rect(),
+            QColor(
+                0,
+                0,
+                0,
+                120,
+            ),
+        )
+
+        controller = self.selection_controller
+
+        # Selection
+
+        if controller.is_valid():
+
+            rect = controller.selection
+
+            # Clear selected area
+            painter.setCompositionMode(
+                QPainter.CompositionMode_Clear
+            )
+
+            painter.fillRect(
+                rect,
+                Qt.transparent,
+            )
+
+            painter.setCompositionMode(
+                QPainter.CompositionMode_SourceOver
+            )
+
+            # Border
+            pen = QPen(
+                QColor(
+                    255,
+                    80,
+                    80,
+                )
+            )
+
+            pen.setWidth(2)
+
+            painter.setPen(
+                pen
+            )
+
+            painter.drawRect(
+                rect
+            )
+
+            # Handles
+            self.draw_handles(
+                painter,
+                rect,
+            )
+
+        # Initial selection being created
+
+        elif self.creating:
+
+            rect = controller.selection
+
+            if (
+                rect.width() > 0
+                and rect.height() > 0
+            ):
+
+                painter.setCompositionMode(
+                    QPainter.CompositionMode_Clear
+                )
+
+                painter.fillRect(
+                    rect,
+                    Qt.transparent,
+                )
+
+                painter.setCompositionMode(
+                    QPainter.CompositionMode_SourceOver
+                )
+
+                pen = QPen(
+                    QColor(
+                        255,
+                        80,
+                        80,
+                    )
+                )
+
+                pen.setWidth(2)
+
+                painter.setPen(
+                    pen
+                )
+
+                painter.drawRect(
+                    rect
+                )
+
+        painter.end()
+
+
+    def draw_handles(
+        self,
+        painter,
+        rect,
+    ):
+
+        size = self.HANDLE_SIZE
+
+        half = size // 2
+
+        points = [
+            QPoint(
+                rect.left(),
+                rect.top(),
+            ),
+
+            QPoint(
+                rect.center().x(),
+                rect.top(),
+            ),
+
+            QPoint(
+                rect.right(),
+                rect.top(),
+            ),
+
+            QPoint(
+                rect.right(),
+                rect.center().y(),
+            ),
+
+            QPoint(
+                rect.right(),
+                rect.bottom(),
+            ),
+
+            QPoint(
+                rect.center().x(),
+                rect.bottom(),
+            ),
+
+            QPoint(
+                rect.left(),
+                rect.bottom(),
+            ),
+
+            QPoint(
+                rect.left(),
+                rect.center().y(),
+            ),
+        ]
+
+        painter.setPen(
+            QPen(
+                QColor(
+                    255,
+                    80,
+                    80,
+                ),
+                1,
+            )
+        )
+
+        painter.setBrush(
+            QColor(
+                255,
+                255,
+                255,
+            )
+        )
+
+        for point in points:
+
+            painter.drawRect(
+                QRect(
+                    point.x() - half,
+                    point.y() - half,
+                    size,
+                    size,
+                )
+            )
+
+
+    def cursor_for_handle(
+        self,
+        handle,
+    ):
+
+        if handle in (
+            "nw",
+            "se",
+        ):
+            return Qt.SizeFDiagCursor
+
+        if handle in (
+            "ne",
+            "sw",
+        ):
+            return Qt.SizeBDiagCursor
+
+        if handle in (
+            "n",
+            "s",
+        ):
+            return Qt.SizeVerCursor
+
+        if handle in (
+            "e",
+            "w",
+        ):
+            return Qt.SizeHorCursor
+
+        return Qt.ArrowCursor
+
+
+    def set_mode(
+        self,
+        value: CaptureMode,
+    ):
+
 
         if value == CaptureMode.FREE:
 
-            self.mode = CaptureMode.FREE
+            self.mode = (
+                CaptureMode.FREE
+            )
+
             self.ratio = None
 
-            self.reset_selection()
+            self.selection_controller.set_mode(
+                value,
+                None,
+            )
 
-        elif value == CaptureMode.ONE_SCREEN:
+            self.creating = False
+
+            self.size_label.hide()
+            self.selection_toolbar.hide_for_selection()
+
+            self.setCursor(
+                Qt.CrossCursor
+            )
+
+            self.update()
+
+            return
+
+
+        if value == CaptureMode.ONE_SCREEN:
 
             self.settings.capture_scope = value
 
             self.close()
 
-            self.on_done(None)
+            self.on_done(
+                None
+            )
 
-        elif value == CaptureMode.ALL_SCREEN:
+            return
+
+
+        if value == CaptureMode.ALL_SCREEN:
 
             self.settings.capture_scope = value
 
             self.close()
 
-            self.on_done(None)
+            self.on_done(
+                None
+            )
 
-        elif value == CaptureMode.RATIO_16_9:
+            return
+
+
+        if value == CaptureMode.RATIO_16_9:
 
             self.mode = value
             self.ratio = 16 / 9
 
-            self.reset_selection()
+            self.selection_controller.set_mode(
+                value,
+                self.ratio,
+            )
 
-        elif value == CaptureMode.RATIO_9_16:
+            self.creating = False
+
+            self.size_label.hide()
+            self.selection_toolbar.hide_for_selection()
+
+            self.setCursor(
+                Qt.CrossCursor
+            )
+
+            self.update()
+
+            return
+
+        if value == CaptureMode.RATIO_9_16:
 
             self.mode = value
             self.ratio = 9 / 16
 
-            self.reset_selection()
+            self.selection_controller.set_mode(
+                value,
+                self.ratio,
+            )
 
-        elif value == CaptureMode.RATIO_1_1:
+            self.creating = False
+
+            self.size_label.hide()
+            self.selection_toolbar.hide_for_selection()
+
+            self.setCursor(
+                Qt.CrossCursor
+            )
+
+            self.update()
+
+            return
+
+        if value == CaptureMode.RATIO_1_1:
 
             self.mode = value
             self.ratio = 1.0
 
-            self.reset_selection()
+            self.selection_controller.set_mode(
+                value,
+                self.ratio,
+            )
 
-    # Reset selection
+            self.creating = False
 
-    def reset_selection(self):
-        self.dragging = False
+            self.size_label.hide()
+            self.selection_toolbar.hide_for_selection()
 
-        self.start = QPoint()
-        self.end = QPoint()
+            self.setCursor(
+                Qt.CrossCursor
+            )
 
-        self.size_label.hide()
-        self.hint.hide()
+            self.update()
 
-        self.update()
+            return
+        
 
-    # Screen helpers
-    
-    def get_screen_rect(self) -> QRect:
+    def get_screen_rect(self):
 
         screen = self.screen()
 
         if screen is None:
-            screen = QGuiApplication.primaryScreen()
+
+            screen = (
+                QGuiApplication.primaryScreen()
+            )
 
         if screen is None:
             return self.rect()
 
         return screen.geometry()
 
-    def clamp_rect_to_screen(
+
+    def show_hint(
         self,
-        rect: QRect
-    ) -> QRect:
-
-        screen_rect = self.get_screen_rect()
-
-        x = max(
-            rect.x(),
-            screen_rect.x()
-        )
-
-        y = max(
-            rect.y(),
-            screen_rect.y()
-        )
-
-        right = min(
-            rect.right(),
-            screen_rect.right()
-        )
-
-        bottom = min(
-            rect.bottom(),
-            screen_rect.bottom()
-        )
-
-        if right < x or bottom < y:
-            return QRect()
-
-        return QRect(
-            x,
-            y,
-            right - x + 1,
-            bottom - y + 1
-        )
-
-    # Invalid selection hint
-
-    def show_hint(self, pos: QPoint):
+        pos: QPoint,
+    ):
 
         self.hint.adjustSize()
 
         x = pos.x() + 12
         y = pos.y() + 12
 
-        # Keep hint inside window
         x = max(
             5,
             min(
                 x,
                 self.width()
                 - self.hint.width()
-                - 5
-            )
+                - 5,
+            ),
         )
 
         y = max(
@@ -629,13 +883,13 @@ class Overlay(QWidget):
                 y,
                 self.height()
                 - self.hint.height()
-                - 5
-            )
+                - 5,
+            ),
         )
 
         self.hint.move(
             x,
-            y
+            y,
         )
 
         self.hint.show()
@@ -643,5 +897,5 @@ class Overlay(QWidget):
 
         QTimer.singleShot(
             1500,
-            self.hint.hide
+            self.hint.hide,
         )
