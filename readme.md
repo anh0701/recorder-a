@@ -11,6 +11,9 @@
               <td><img src="demo5.png" width="250"/></td>
               <td><img src="demo6.png" width="250"/></td>
        </tr>
+       <tr>
+              <td><img src="demo7.png" width="250"/></td>
+       </tr>
 </table>
 
 ```sh
