@@ -11,89 +11,47 @@ class VideoMerger:
         segment_directory: Path,
         output_file: Path,
     ):
-
         if not segments:
-            raise RuntimeError(
-                "No segments available."
-            )
+            raise RuntimeError("No segments available.")
 
         output_file.parent.mkdir(
             parents=True,
-            exist_ok=True
+            exist_ok=True,
         )
 
-        concat_file = (
-            segment_directory
-            / "concat.txt"
-        )
+        concat_file = segment_directory / "concat.txt"
 
         VideoMerger._create_concat_file(
             segments,
             concat_file,
         )
 
-        merged_file = (
-            segment_directory
-            / "merged.mp4"
-        )
+        merged_file = segment_directory / "merged.mp4"
 
         command = [
             "ffmpeg",
             "-y",
+            "-hide_banner",
+            "-loglevel", "warning",
 
-            "-f",
-            "concat",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", str(concat_file),
 
-            "-safe",
-            "0",
+            # Không encode lại video/audio.
+            "-map", "0:v:0",
+            "-map", "0:a:0?",
+            "-c", "copy",
 
-            "-i",
-            str(concat_file),
-
-            "-c:v",
-            "libx264",
-
-            "-preset",
-            "veryfast",
-
-            "-crf",
-            "18",
-
-            "-pix_fmt",
-            "yuv420p",
-        ]
-
-        # Chỉ encode audio nếu segment có audio.
-        has_audio = VideoMerger._has_audio(
-            segments[0]
-        )
-
-        if has_audio:
-
-            command += [
-                "-c:a",
-                "aac",
-
-                "-b:a",
-                "192k",
-
-                "-ar",
-                "48000",
-
-                "-ac",
-                "2",
-            ]
-
-        command += [
-            "-movflags",
-            "+faststart",
+            # Đưa metadata MP4 lên đầu file.
+            "-movflags", "+faststart",
 
             str(merged_file),
         ]
 
         print(
             "[FFMPEG MERGE]",
-            " ".join(command)
+            " ".join(command),
         )
 
         result = subprocess.run(
@@ -102,35 +60,24 @@ class VideoMerger:
         )
 
         if result.returncode != 0:
-
             raise RuntimeError(
                 "FFmpeg merge failed "
                 f"with exit code {result.returncode}"
             )
 
-        VideoMerger._validate_output(
-            merged_file
-        )
+        VideoMerger._validate_output(merged_file)
 
         if output_file.exists():
-
-            try:
-                output_file.unlink()
-
-            except Exception as e:
-
-                raise RuntimeError(
-                    f"Cannot replace output file: {e}"
-                )
+            output_file.unlink()
 
         shutil.move(
             str(merged_file),
-            str(output_file)
+            str(output_file),
         )
 
         print(
             "[RECORDER] final video:",
-            output_file
+            output_file,
         )
 
     @staticmethod
@@ -138,15 +85,12 @@ class VideoMerger:
         segments,
         concat_file: Path,
     ):
-
         with open(
             concat_file,
             "w",
-            encoding="utf-8"
+            encoding="utf-8",
         ) as file:
-
             for segment in segments:
-
                 path = (
                     Path(segment)
                     .resolve()
@@ -155,7 +99,7 @@ class VideoMerger:
 
                 path = path.replace(
                     "'",
-                    "'\\''"
+                    "'\\''",
                 )
 
                 file.write(
@@ -164,33 +108,26 @@ class VideoMerger:
 
         print(
             "[RECORDER] concat list:",
-            concat_file
+            concat_file,
         )
 
     @staticmethod
     def _validate_output(path: Path):
-
         if not path.exists():
             raise RuntimeError(
-                "Merged file does not exist."
+                "Merged video does not exist."
             )
 
         if path.stat().st_size <= 0:
             raise RuntimeError(
-                "Merged file is empty."
+                "Merged video is empty."
             )
 
         command = [
             "ffprobe",
-            "-v",
-            "error",
-
-            "-show_entries",
-            "format=duration",
-
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
             str(path),
         ]
 
@@ -203,33 +140,31 @@ class VideoMerger:
 
         if result.returncode != 0:
             raise RuntimeError(
-                "Merged video failed validation."
+                "Merged video failed validation: "
+                + result.stderr
+            )
+
+        duration = result.stdout.strip()
+
+        if not duration:
+            raise RuntimeError(
+                "Cannot determine merged video duration."
             )
 
         print(
             "[RECORDER] final duration:",
-            result.stdout.strip(),
-            "seconds"
+            duration,
+            "seconds",
         )
-
 
     @staticmethod
     def _has_audio(path: Path):
-
         command = [
             "ffprobe",
-            "-v",
-            "error",
-
-            "-select_streams",
-            "a:0",
-
-            "-show_entries",
-            "stream=index",
-
-            "-of",
-            "csv=p=0",
-
+            "-v", "error",
+            "-select_streams", "a:0",
+            "-show_entries", "stream=index",
+            "-of", "csv=p=0",
             str(path),
         ]
 
@@ -240,6 +175,7 @@ class VideoMerger:
             text=True,
         )
 
-        return bool(
-            result.stdout.strip()
+        return (
+            result.returncode == 0
+            and bool(result.stdout.strip())
         )
